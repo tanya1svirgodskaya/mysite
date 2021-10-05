@@ -1,0 +1,74 @@
+version: '3'
+services:
+    web:
+        image: webdevops/php-apache-dev:7.4
+        container_name: web
+        restart: always
+        user: application
+        environment:
+          - WEB_ALIAS_DOMAIN=local.mysite.com
+          - WEB_DOCUMENT_ROOT=/app/pub
+          - PHP_DATE_TIMEZONE=EST
+          - PHP_DISPLAY_ERRORS=1
+          - PHP_MEMORY_LIMIT=5000M
+          - PHP_MAX_EXECUTION_TIME=300
+          - PHP_POST_MAX_SIZE=500M
+          - PHP_UPLOAD_MAX_FILESIZE=2024M
+        volumes:
+          - "./:/app:cached"
+        ports:
+          - "80:80"
+          - "443:443"
+          - "32823:22"
+        links:
+          - mysql
+    elasticsearch:
+      image: docker.elastic.co/elasticsearch/elasticsearch:7.15.0
+      container_name: elasticsearch
+      environment:
+        - node.name=es01
+        - cluster.name=es-docker-cluster
+        - cluster.initial_master_nodes=es01
+        - bootstrap.memory_lock=true
+        - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      ulimits:
+        memlock:
+          soft: -1
+          hard: -1
+      volumes:
+        - data01:/usr/share/elasticsearch/data
+      ports:
+        - "9200:9200"
+    mysql:
+        image: mariadb:10.3
+        container_name: mysql
+        restart: always
+        ports:
+          - "3307:3307"
+        environment:
+          - MYSQL_ROOT_PASSWORD=root
+          - MYSQL_DATABASE=magento
+          - MYSQL_USER=root
+        volumes:
+          - db-data:/var/lib/mysql
+    phpmyadmin:
+        container_name: phpmyadmin
+        restart: always
+        image: phpmyadmin/phpmyadmin:latest
+        environment:
+          - PMA_HOST=mysql
+          - MYSQL_ROOT_PASSWORD=root
+          - PMA_USER=root
+          - PMA_PASSWORD=root
+
+        ports:
+          - "8080:80"
+        links:
+          - mysql:db
+        depends_on:
+          - mysql
+volumes:
+    db-data:
+        external: false
+    data01:
+        driver: local
